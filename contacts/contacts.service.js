@@ -1,69 +1,40 @@
-const fs = require("fs/promises");
-const { nanoid } = require("nanoid");
-const path = require("path");
-
-const relativePath = "../data/contacts.json";
-const contactsPath = path.join(__dirname, relativePath);
+const { Contact } = require("./contact.model");
 
 const listContacts = async () => {
   try {
-    const jsondata = await fs.readFile(contactsPath);
-    const parsedData = JSON.parse(jsondata);
-    return parsedData;
+    const jsondata = await Contact.find();
+    console.log(jsondata);
+    return jsondata;
   } catch (error) {
-    console.error("Error. Could not read file", error.message);
+    console.error("Error. Could not list contacts", error.message);
     throw "Cannot read contacts";
   }
 };
 
 const getContactById = async (contactId) => {
   try {
-    const contacts = await listContacts();
-    const searchedContact = contacts.find(
-      (contact) => contactId === contact.id
-    );
-    console.log(searchedContact);
+    const searchedContact = await Contact.findById(contactId);
     return searchedContact;
   } catch {
-    const message = "Cannot read contact with id " + contactId;
+    const message = "Cannot find contact with id " + contactId;
     console.error(message);
-    throw message;
+    return undefined;
   }
 };
 
 const removeContact = async (contactId) => {
   try {
-    console.log("delete test", contactId);
-    const contacts = await listContacts();
-    console.log("l", contacts.length);
-    const removedContact = contacts.find((contact) => contact.id === contactId);
-    const filteredList = contacts.filter((contact) => contact.id !== contactId);
-    console.log("l2", filteredList.length);
-
-    await fs.writeFile(contactsPath, JSON.stringify(filteredList));
-    console.log("deleted contact:", removedContact);
-    return filteredList;
+    const deletedContact = await Contact.findByIdAndDelete(contactId);
+    return deletedContact;
   } catch (error) {
-    console.error("Error. Could not write file", error.message);
-    throw "Cannot delete with id " + contactId;
+    console.error("Error. Could not delete contact", error.message);
+    return undefined;
   }
 };
 
 const addContact = async (body) => {
   try {
-    const { name, email, phone } = body;
-    const contacts = await listContacts();
-    const newContact = {
-      id: nanoid(),
-      name: name,
-      email: email,
-      phone: phone,
-    };
-    const updatedList = [...contacts, newContact];
-
-    await fs.writeFile(contactsPath, JSON.stringify(updatedList));
-    // throw "blad zapisu";
-    console.log("added new contact:", newContact);
+    const newContact = Contact.create(body);
     return newContact;
   } catch (error) {
     console.error("Error. Could not write file", error.message);
@@ -73,27 +44,26 @@ const addContact = async (body) => {
 
 const updateContact = async (contactId, body) => {
   try {
-    const { name, email, phone } = body;
-    const contacts = await listContacts();
-    const updatedContactList = contacts.map((el) => {
-      if (el.id === contactId) {
-        const updatedContact = {
-          id: contactId,
-          name: name,
-          email: email,
-          phone: phone,
-        };
-        return updatedContact;
-      } else {
-        return el;
-      }
+    const updatedContact = await Contact.findByIdAndUpdate(contactId, body, {
+      new: true,
     });
-
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContactList));
-    console.log("updated contact:", updatedContactList);
+    return updatedContact;
   } catch (error) {
-    console.error("Error. Could not write file", error.message);
+    console.error("Error. Could not update contact", error.message);
     throw "Cannot update contact with id " + contactId;
+  }
+};
+
+const updateContactStatus = async (contactId, body) => {
+  try {
+    const contact = await Contact.findById(contactId);
+    if (body.favorite !== contact.favorite) {
+      contact.favorite = body.favorite;
+      return await contact.save();
+    }
+  } catch (error) {
+    console.error("Sorry! Status cannot be updated", error.message);
+    return undefined;
   }
 };
 
@@ -103,4 +73,5 @@ module.exports = {
   removeContact,
   addContact,
   updateContact,
+  updateContactStatus,
 };

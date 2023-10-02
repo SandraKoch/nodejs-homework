@@ -1,13 +1,14 @@
 const express = require("express");
+// const Joi = require("joi");
 const {
   listContacts,
   getContactById,
   addContact,
   removeContact,
   updateContact,
-} = require("../../services/contacts.service");
-const Joi = require("joi");
-const { validateContact } = require("../../schema/contacts.schema");
+  updateContactStatus,
+} = require("./contacts.service");
+const { contactValidation } = require("./contact.validator");
 
 const router = express.Router();
 
@@ -44,17 +45,11 @@ router.get("/:contactId", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
-  try {
-    const validatedContact = validateContact(req.body);
-
-    if (validatedContact.error) {
-      res.status(400).json({
-        status: "Bad request",
-        code: 400,
-        message: "Missing required field",
-      });
-    } else {
+router.post(
+  "/",
+  (req, res, next) => contactValidation(req, res, next),
+  async (req, res) => {
+    try {
       const newContact = await addContact(req.body);
       res.status(201).json({
         status: "Created",
@@ -62,13 +57,13 @@ router.post("/", async (req, res, next) => {
         message: "Success! New contact added",
         newContact,
       });
+    } catch {
+      res.status(500).json({ status: "Internal Server Error", code: 500 });
     }
-  } catch {
-    res.status(500).json({ status: "Internal Server Error", code: 500 });
   }
-});
+);
 
-router.delete("/:contactId", async (req, res, next) => {
+router.delete("/:contactId", async (req, res) => {
   try {
     const filteredList = await removeContact(req.params.contactId);
     if (filteredList) {
@@ -88,19 +83,12 @@ router.delete("/:contactId", async (req, res, next) => {
   }
 });
 
-router.put("/:contactId", async (req, res, next) => {
-  try {
-    const { contactId } = req.params;
-
-    const validatedContact = validateContact(req.body);
-
-    if (validatedContact.error) {
-      res.status(400).json({
-        status: "Bad request",
-        code: 400,
-        message: "Data validation: missing fields",
-      });
-    } else {
+router.put(
+  "/:contactId",
+  (req, res, next) => contactValidation(req, res, next),
+  async (req, res, next) => {
+    try {
+      const { contactId } = req.params;
       const updatedList = await updateContact(contactId, req.body);
       res.status(200).json({
         status: "OK",
@@ -108,6 +96,39 @@ router.put("/:contactId", async (req, res, next) => {
         message: "Contact updated",
         updatedList,
       });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ status: "Internal Server Error", code: 500 });
+    }
+  }
+);
+
+router.patch("/:contactId/favorite", async (req, res) => {
+  try {
+    if (!req.body) {
+      return res.status(400).json({
+        status: "Bad Request",
+        code: "400",
+        message: "Missing field: favorite",
+      });
+    } else {
+      const { contactId } = req.params;
+      const updatedStatus = await updateContactStatus(contactId, req.body);
+      if (updatedStatus) {
+        res.status(200).json({
+          status: "OK",
+          code: "200",
+          message: "Contact status updated",
+          updatedStatus,
+        });
+      } else {
+        return res.status(404).json({
+          status: "Not Found",
+          code: 404,
+          message:
+            "Contact not found or status has not changed (set a different status)",
+        });
+      }
     }
   } catch (error) {
     console.error(error.message);

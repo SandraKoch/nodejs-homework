@@ -1,16 +1,16 @@
 const Joi = require("joi");
 
-const userSchema = Joi.object({
+const contactSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().required(),
   phone: Joi.string().required(),
   favorite: Joi.boolean().optional(),
 });
 
-const userValidation = (req, res, next) => {
-  const newUser = req.body;
+const contactValidation = (req, res, next) => {
+  const newContact = req.body;
 
-  const { error } = userSchema.validate(newUser);
+  const { error } = contactSchema.validate(newContact);
 
   if (error) {
     return res.status(400).send({ error: error.message });
@@ -18,4 +18,4 @@ const userValidation = (req, res, next) => {
   return next();
 };
 
-module.exports = { userValidation };
+module.exports = { contactValidation };
