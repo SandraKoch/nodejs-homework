@@ -1,9 +1,9 @@
 const { Contact } = require("./contact.model");
 
-const listContacts = async () => {
+const listContacts = async (userId) => {
   try {
-    const jsondata = await Contact.find();
-    console.log(jsondata);
+    const jsondata = await Contact.findOne({ owner: userId });
+    // console.log(jsondata);
     return jsondata;
   } catch (error) {
     console.error("Error. Could not list contacts", error.message);
@@ -11,9 +11,14 @@ const listContacts = async () => {
   }
 };
 
-const getContactById = async (contactId) => {
+const getContactById = async (contactId, userId) => {
   try {
-    const searchedContact = await Contact.findById(contactId);
+    console.log("contactId", contactId, "userId", userId);
+    const searchedContact = await Contact.findOne({
+      _id: contactId,
+      owner: userId,
+    });
+    console.log("searchedContact", searchedContact);
     return searchedContact;
   } catch {
     const message = "Cannot find contact with id " + contactId;
@@ -22,9 +27,12 @@ const getContactById = async (contactId) => {
   }
 };
 
-const removeContact = async (contactId) => {
+const removeContact = async (contactId, userId) => {
   try {
-    const deletedContact = await Contact.findByIdAndDelete(contactId);
+    const deletedContact = await Contact.deleteOne({
+      _id: contactId,
+      owner: userId,
+    });
     return deletedContact;
   } catch (error) {
     console.error("Error. Could not delete contact", error.message);
@@ -32,9 +40,9 @@ const removeContact = async (contactId) => {
   }
 };
 
-const addContact = async (body) => {
+const addContact = async (body, userId) => {
   try {
-    const newContact = Contact.create(body);
+    const newContact = Contact.create({ ...body, owner: userId });
     return newContact;
   } catch (error) {
     console.error("Error. Could not write file", error.message);

@@ -9,12 +9,13 @@ const {
   updateContactStatus,
 } = require("./contacts.service");
 const { contactValidation } = require("./contact.validator");
+const { authMiddleware } = require("../auth/auth.service");
 
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/", authMiddleware, async (req, res, next) => {
   try {
-    const contacts = await listContacts();
+    const contacts = await listContacts(req.userId);
     res.status(200).json({ status: "Success", code: 200, contacts });
   } catch (error) {
     console.error(error.messsage);
@@ -24,9 +25,9 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.get("/:contactId", async (req, res, next) => {
+router.get("/:contactId", authMiddleware, async (req, res, next) => {
   try {
-    const contact = await getContactById(req.params.contactId);
+    const contact = await getContactById(req.params.contactId, req.userId);
     if (!contact) {
       res
         .status(404)
@@ -47,10 +48,12 @@ router.get("/:contactId", async (req, res, next) => {
 
 router.post(
   "/",
+  //refactor code - use middleware shortened notation
+  authMiddleware,
   (req, res, next) => contactValidation(req, res, next),
   async (req, res) => {
     try {
-      const newContact = await addContact(req.body);
+      const newContact = await addContact(req.body, req.userId);
       res.status(201).json({
         status: "Created",
         code: 201,
@@ -63,9 +66,9 @@ router.post(
   }
 );
 
-router.delete("/:contactId", async (req, res) => {
+router.delete("/:contactId", authMiddleware, async (req, res) => {
   try {
-    const filteredList = await removeContact(req.params.contactId);
+    const filteredList = await removeContact(req.params.contactId, req.userId);
     if (filteredList) {
       res.status(204).json({
         status: "No Content",

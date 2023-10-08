@@ -7,7 +7,7 @@ const contactSchema = new Schema(
       required: [true, "Name has to be present"],
       index: true,
     },
-    email: { type: String, unique: true },
+    email: { type: String },
     phone: {
       type: String,
       required: true,
@@ -15,6 +15,10 @@ const contactSchema = new Schema(
     favorite: {
       type: Boolean,
       default: false,
+    },
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "user",
     },
   },
   { timestamps: true, versionKey: false }
