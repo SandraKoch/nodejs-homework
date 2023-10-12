@@ -2,8 +2,7 @@ const { Contact } = require("./contact.model");
 
 const listContacts = async (userId) => {
   try {
-    const jsondata = await Contact.findOne({ owner: userId });
-    // console.log(jsondata);
+    const jsondata = await Contact.find({ owner: userId });
     return jsondata;
   } catch (error) {
     console.error("Error. Could not list contacts", error.message);
@@ -13,12 +12,12 @@ const listContacts = async (userId) => {
 
 const getContactById = async (contactId, userId) => {
   try {
-    console.log("contactId", contactId, "userId", userId);
+    // console.log("contactId", contactId, "userId", userId);
     const searchedContact = await Contact.findOne({
       _id: contactId,
       owner: userId,
     });
-    console.log("searchedContact", searchedContact);
+    console.log("Searched contact:", searchedContact);
     return searchedContact;
   } catch {
     const message = "Cannot find contact with id " + contactId;
@@ -33,6 +32,7 @@ const removeContact = async (contactId, userId) => {
       _id: contactId,
       owner: userId,
     });
+    console.log("deletedContact", deletedContact);
     return deletedContact;
   } catch (error) {
     console.error("Error. Could not delete contact", error.message);
@@ -50,11 +50,15 @@ const addContact = async (body, userId) => {
   }
 };
 
-const updateContact = async (contactId, body) => {
+const updateContact = async (contactId, body, userId) => {
   try {
-    const updatedContact = await Contact.findByIdAndUpdate(contactId, body, {
-      new: true,
-    });
+    const updatedContact = await Contact.findOneAndUpdate(
+      { _id: contactId, owner: userId },
+      { ...body, owner: userId },
+      {
+        new: true,
+      }
+    );
     return updatedContact;
   } catch (error) {
     console.error("Error. Could not update contact", error.message);
@@ -62,9 +66,9 @@ const updateContact = async (contactId, body) => {
   }
 };
 
-const updateContactStatus = async (contactId, body) => {
+const updateContactStatus = async (contactId, body, userId) => {
   try {
-    const contact = await Contact.findById(contactId);
+    const contact = await Contact.findOne({ _id: contactId, owner: userId });
     if (body.favorite !== contact.favorite) {
       contact.favorite = body.favorite;
       return await contact.save();

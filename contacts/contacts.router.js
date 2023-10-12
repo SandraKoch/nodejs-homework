@@ -48,7 +48,6 @@ router.get("/:contactId", authMiddleware, async (req, res, next) => {
 
 router.post(
   "/",
-  //refactor code - use middleware shortened notation
   authMiddleware,
   (req, res, next) => contactValidation(req, res, next),
   async (req, res) => {
@@ -68,13 +67,15 @@ router.post(
 
 router.delete("/:contactId", authMiddleware, async (req, res) => {
   try {
-    const filteredList = await removeContact(req.params.contactId, req.userId);
-    if (filteredList) {
+    const removeResponse = await removeContact(
+      req.params.contactId,
+      req.userId
+    );
+    if (removeResponse && removeResponse.deletedCount > 0) {
       res.status(204).json({
         status: "No Content",
         code: "204",
         message: "Contact successfully deleted",
-        filteredList,
       });
     } else {
       res
@@ -88,17 +89,30 @@ router.delete("/:contactId", authMiddleware, async (req, res) => {
 
 router.put(
   "/:contactId",
+  authMiddleware,
   (req, res, next) => contactValidation(req, res, next),
   async (req, res, next) => {
     try {
       const { contactId } = req.params;
-      const updatedList = await updateContact(contactId, req.body);
-      res.status(200).json({
-        status: "OK",
-        code: "200",
-        message: "Contact updated",
-        updatedList,
-      });
+      const updatedContact = await updateContact(
+        contactId,
+        req.body,
+        req.userId
+      );
+      if (updatedContact) {
+        res.status(200).json({
+          status: "OK",
+          code: "200",
+          message: "Contact updated",
+          updatedContact,
+        });
+      } else {
+        res.status(404).json({
+          status: "Not found",
+          code: 404,
+          message: "Cannot update. Contact not found",
+        });
+      }
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ status: "Internal Server Error", code: 500 });
@@ -106,7 +120,7 @@ router.put(
   }
 );
 
-router.patch("/:contactId/favorite", async (req, res) => {
+router.patch("/:contactId/favorite", authMiddleware, async (req, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({
@@ -116,7 +130,11 @@ router.patch("/:contactId/favorite", async (req, res) => {
       });
     } else {
       const { contactId } = req.params;
-      const updatedStatus = await updateContactStatus(contactId, req.body);
+      const updatedStatus = await updateContactStatus(
+        contactId,
+        req.body,
+        req.userId
+      );
       if (updatedStatus) {
         res.status(200).json({
           status: "OK",

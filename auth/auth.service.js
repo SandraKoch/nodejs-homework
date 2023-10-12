@@ -1,6 +1,11 @@
 const { secret } = require("../config");
 const jwt = require("jsonwebtoken");
 
+const invalidTokens = new Set();
+
+const invalidateToken = (token) => invalidTokens.add(token);
+const isTokenInvalidated = (token) => invalidTokens.has(token);
+
 const tokenFromHeaders = (headers) => {
   return headers.authorization?.replace("Bearer ", "");
 };
@@ -12,18 +17,18 @@ const authMiddleware = async (req, res, next) => {
 
     const decodedToken = jwt.verify(token, secret);
     const userId = decodedToken.userId;
-    console.log("decodedToken", userId);
 
-    if (!decodedToken) {
+    if (!decodedToken || isTokenInvalidated(token)) {
       res.status(401).json({
         status: "Unauthorized",
         code: 401,
         message: "Not authorized",
       });
+    } else {
+      req.userId = userId;
+      req.token = token;
+      next();
     }
-
-    req.userId = userId;
-    next();
   } catch (error) {
     return res.status(401).send({ message: error.message });
   }
@@ -31,4 +36,6 @@ const authMiddleware = async (req, res, next) => {
 
 module.exports = {
   authMiddleware,
+  invalidateToken,
+  isTokenInvalidated,
 };

@@ -5,6 +5,11 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { secret } = require("../config");
+const {
+  authMiddleware,
+  invalidateToken,
+  isTokenInvalidated,
+} = require("../auth/auth.service");
 
 router.post(
   "/signup",
@@ -41,7 +46,45 @@ router.post(
     }
   }
 );
+router.get("/current", authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.userId;
+    const userData = await User.findOne({ userId });
+    console.log("userData", userData);
+    if (!userData) {
+      return res.status(401).json({
+        status: "Unauthorized",
+        code: 401,
+        message: "No data here",
+      });
+    } else {
+      res.status(200).json({
+        status: "OK",
+        code: 200,
+        message: "Here is current user data:",
+        userData: {
+          email: userData.email,
+          subscription: userData.subscription,
+        },
+      });
+    }
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ status: "Internal Server Error", code: 500 });
+  }
+});
 
+router.get("/logout", authMiddleware, async (req, res) => {
+  try {
+    invalidateToken(req.token);
+    res.status(200).json({
+      message: "ok",
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ status: "Internal Server Error", code: 500 });
+  }
+});
 router.post(
   "/login",
   (req, res, next) => userValidation(req, res, next),
