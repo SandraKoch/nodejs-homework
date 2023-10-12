@@ -13,8 +13,10 @@ const contactValidation = (req, res, next) => {
   const { error } = contactSchema.validate(newContact);
 
   if (error) {
-    return res.status(400).send({ error: error.message });
-    // you can add .json({ message: "Contact validation error" })
+    return res
+      .status(400)
+      .json({ message: "Contact validation error" })
+      .send({ error: error.message });
   }
   return next();
 };

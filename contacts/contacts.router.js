@@ -1,5 +1,4 @@
 const express = require("express");
-// const Joi = require("joi");
 const {
   listContacts,
   getContactById,
@@ -9,7 +8,7 @@ const {
   updateContactStatus,
 } = require("./contacts.service");
 const { contactValidation } = require("./contact.validator");
-const { authMiddleware } = require("../auth/auth.service");
+const { authMiddleware } = require("../auth/auth.middleware");
 
 const router = express.Router();
 

@@ -12,7 +12,6 @@ const listContacts = async (userId) => {
 
 const getContactById = async (contactId, userId) => {
   try {
-    // console.log("contactId", contactId, "userId", userId);
     const searchedContact = await Contact.findOne({
       _id: contactId,
       owner: userId,

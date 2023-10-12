@@ -5,11 +5,7 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { secret } = require("../config");
-const {
-  authMiddleware,
-  invalidateToken,
-  isTokenInvalidated,
-} = require("../auth/auth.service");
+const { authMiddleware, invalidateToken } = require("../auth/auth.middleware");
 
 router.post(
   "/signup",
@@ -27,7 +23,6 @@ router.post(
           password: hash,
         });
         await newUser.save();
-        //token
 
         res.status(201).json({
           user: {
@@ -105,7 +100,6 @@ router.post(
           user.password
         );
 
-        // console.log("passwordComparison", passwordComparison);
         if (!passwordComparison) {
           return res.status(401).json({
             status: "Unauthorized",
@@ -113,8 +107,6 @@ router.post(
             message: "Email or password is wrong",
           });
         } else {
-          // const secret = config.secret;
-          // console.log("secret", secret);
           console.log("user._id", user._id);
 
           const token = jwt.sign({ userId: user._id }, secret, {

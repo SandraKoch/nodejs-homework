@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
-
 const { mongoConnectionString } = require("./config");
-// const MONGO_CONNECTION_STRING = process.env.MONGO_CONNECTION_STRING;
 
 const connect = async () => {
   try {
