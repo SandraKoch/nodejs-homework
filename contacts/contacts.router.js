@@ -1,5 +1,4 @@
 const express = require("express");
-// const Joi = require("joi");
 const {
   listContacts,
   getContactById,
@@ -9,12 +8,13 @@ const {
   updateContactStatus,
 } = require("./contacts.service");
 const { contactValidation } = require("./contact.validator");
+const { authMiddleware } = require("../auth/auth.middleware");
 
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/", authMiddleware, async (req, res, next) => {
   try {
-    const contacts = await listContacts();
+    const contacts = await listContacts(req.userId);
     res.status(200).json({ status: "Success", code: 200, contacts });
   } catch (error) {
     console.error(error.messsage);
@@ -24,9 +24,9 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.get("/:contactId", async (req, res, next) => {
+router.get("/:contactId", authMiddleware, async (req, res, next) => {
   try {
-    const contact = await getContactById(req.params.contactId);
+    const contact = await getContactById(req.params.contactId, req.userId);
     if (!contact) {
       res
         .status(404)
@@ -47,10 +47,11 @@ router.get("/:contactId", async (req, res, next) => {
 
 router.post(
   "/",
+  authMiddleware,
   (req, res, next) => contactValidation(req, res, next),
   async (req, res) => {
     try {
-      const newContact = await addContact(req.body);
+      const newContact = await addContact(req.body, req.userId);
       res.status(201).json({
         status: "Created",
         code: 201,
@@ -63,15 +64,17 @@ router.post(
   }
 );
 
-router.delete("/:contactId", async (req, res) => {
+router.delete("/:contactId", authMiddleware, async (req, res) => {
   try {
-    const filteredList = await removeContact(req.params.contactId);
-    if (filteredList) {
+    const removeResponse = await removeContact(
+      req.params.contactId,
+      req.userId
+    );
+    if (removeResponse && removeResponse.deletedCount > 0) {
       res.status(204).json({
         status: "No Content",
         code: "204",
         message: "Contact successfully deleted",
-        filteredList,
       });
     } else {
       res
@@ -85,17 +88,30 @@ router.delete("/:contactId", async (req, res) => {
 
 router.put(
   "/:contactId",
+  authMiddleware,
   (req, res, next) => contactValidation(req, res, next),
   async (req, res, next) => {
     try {
       const { contactId } = req.params;
-      const updatedList = await updateContact(contactId, req.body);
-      res.status(200).json({
-        status: "OK",
-        code: "200",
-        message: "Contact updated",
-        updatedList,
-      });
+      const updatedContact = await updateContact(
+        contactId,
+        req.body,
+        req.userId
+      );
+      if (updatedContact) {
+        res.status(200).json({
+          status: "OK",
+          code: "200",
+          message: "Contact updated",
+          updatedContact,
+        });
+      } else {
+        res.status(404).json({
+          status: "Not found",
+          code: 404,
+          message: "Cannot update. Contact not found",
+        });
+      }
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ status: "Internal Server Error", code: 500 });
@@ -103,7 +119,7 @@ router.put(
   }
 );
 
-router.patch("/:contactId/favorite", async (req, res) => {
+router.patch("/:contactId/favorite", authMiddleware, async (req, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({
@@ -113,7 +129,11 @@ router.patch("/:contactId/favorite", async (req, res) => {
       });
     } else {
       const { contactId } = req.params;
-      const updatedStatus = await updateContactStatus(contactId, req.body);
+      const updatedStatus = await updateContactStatus(
+        contactId,
+        req.body,
+        req.userId
+      );
       if (updatedStatus) {
         res.status(200).json({
           status: "OK",
