@@ -6,6 +6,70 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { secret } = require("../config");
 const { authMiddleware, invalidateToken } = require("../auth/auth.middleware");
+const fs = require("fs/promises");
+const gravatar = require("gravatar");
+const multer = require("multer");
+const path = require("path");
+const Jimp = require("jimp");
+
+const upload = multer({
+  dest: path.join(__dirname, "../tmp"),
+});
+router.patch(
+  "/avatars",
+  authMiddleware,
+  upload.single("avatar"),
+  async (req, res) => {
+    try {
+      const { userId } = req.userId;
+      const user = await User.findOne({ userId });
+
+      if (!user) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: no user authentication" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // console.log("user", user);
+      // console.log("req.file", req.file);
+
+      Jimp.read(req.file.path)
+        .then((avatar) => {
+          return avatar.resize(250, 250);
+        })
+        .catch((e) => console.error(e));
+      const avatarName = req.file.originalname;
+      const extensionIndex = avatarName.lastIndexOf(".");
+      const extension = avatarName.slice(extensionIndex);
+      const newAvatarName = `${user.email}_${user._id}${extension}`;
+      const newAvatarPath = path.join(
+        process.cwd(),
+        "public/avatars",
+        newAvatarName
+      );
+      try {
+        await fs.rename(req.file.path, newAvatarPath);
+        user.avatarURL = `/avatars/${newAvatarName}`;
+        await user.save();
+        return res.status(200).send({
+          status: "OK",
+          code: 200,
+          update: { avatarURL: user.avatarURL },
+        });
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ status: "Internal Server Error", code: 500 });
+    }
+  }
+);
 
 router.post(
   "/signup",
@@ -21,6 +85,7 @@ router.post(
         const newUser = new User({
           email,
           password: hash,
+          avatarURL: gravatar.url(email, { d: "identicon" }),
         });
         await newUser.save();
 
@@ -28,6 +93,7 @@ router.post(
           user: {
             email: newUser.email,
             subscription: newUser.subscription,
+            avatarURL: newUser.avatarURL,
           },
         });
       } else {
@@ -80,6 +146,7 @@ router.get("/logout", authMiddleware, async (req, res) => {
     res.status(500).json({ status: "Internal Server Error", code: 500 });
   }
 });
+
 router.post(
   "/login",
   (req, res, next) => userValidation(req, res, next),
